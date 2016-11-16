@@ -3,7 +3,7 @@ package com.viskan.uniquecustomer.venueretailgroup.web.extensions.controller;
 import com.viskan.uniquecustomer.venueretailgroup.web.extensions.dao.UpdateOrderStatusDao;
 import com.viskan.uniquecustomer.venueretailgroup.web.extensions.restclient.UpdateOrderStatusRestClient;
 
-import static com.viskan.uniquecustomer.venueretailgroup.web.extensions.dao.UpdateOrderStatusDao.DELIVERY_NUMBER;
+import static com.viskan.uniquecustomer.venueretailgroup.web.extensions.dao.UpdateOrderStatusDao.DELIVERYNUMBER;
 import static com.viskan.uniquecustomer.venueretailgroup.web.extensions.dao.UpdateOrderStatusDao.RETURN_VALUE;
 import static com.viskan.uniquecustomer.venueretailgroup.web.extensions.dao.UpdateOrderStatusDao.SPRC_UPDATE_TRACKING_REFERENCE;
 
@@ -36,11 +36,6 @@ public class UpdateOrderStatusController
 
     private static final String ACCENT = "accent";
 
-    private static final int RESPONSE_CODE_OK = 0;
-    private static final int RESPONSE_CODE_ORDER_NOT_FOUND = -1;
-    private static final int RESPONSE_CODE_UNEXPECTED_PROBLEM = -99;
-    private static final int VISKAN_RESPONSE_CODE_ORDER_NOT_DELIVERED = -66;
-
     /**
      * Updates tracking reference number for the delivery if the delivery was not cancelled, in which case a mail is sent to customer service. Unless
      * the delivery was cancelled, it will hereafter be reported.
@@ -62,38 +57,49 @@ public class UpdateOrderStatusController
         {
             if (!domainName.toLowerCase().equals(ACCENT))
             {
-                return RESPONSE_CODE_ORDER_NOT_FOUND;
+                logger.debug(String.format("Domain name not recognized: %s", domainName));
+                return WebServiceResponseCodes.RESPONSE_CODE_ORDER_NOT_FOUND.getId();
             }
 
             Map<String, Object> resultSet = updateOrderStatusDao.updateTrackingReference(orderNumber, status, trackingNumber);
 
             if (resultSet == null || resultSet.isEmpty())
             {
-                logger.debug(String.format("Resultset from %s was null or empty - resultSet=%s", SPRC_UPDATE_TRACKING_REFERENCE, resultSet));
-                return RESPONSE_CODE_UNEXPECTED_PROBLEM;
+                logger.debug(String.format(
+                        "Resultset from %s was null or empty - resultSet=%s",
+                        SPRC_UPDATE_TRACKING_REFERENCE,
+                        resultSet));
+                return WebServiceResponseCodes.RESPONSE_CODE_UNEXPECTED_PROBLEM.getId();
             }
 
             int responseCode = (int) resultSet.get(RETURN_VALUE);
 
-            if (responseCode != RESPONSE_CODE_OK)
+            if (responseCode != WebServiceResponseCodes.RESPONSE_CODE_OK.getId())
             {
-                logger.debug(String.format("Could not process delivery. Response code from %s: %s", SPRC_UPDATE_TRACKING_REFERENCE, responseCode));
-                return responseCode == VISKAN_RESPONSE_CODE_ORDER_NOT_DELIVERED ? RESPONSE_CODE_OK : responseCode;
+                logger.debug(String.format(
+                        "Could not process delivery. Response code from %s: %s (%s)",
+                        SPRC_UPDATE_TRACKING_REFERENCE,
+                        WebServiceResponseCodes.getById(responseCode).getId(),
+                        WebServiceResponseCodes.getById(responseCode).getName()));
+                return responseCode == WebServiceResponseCodes.VISKAN_INTERNAL_RESPONSE_CODE_ORDER_NOT_DELIVERED.getId() ? WebServiceResponseCodes.RESPONSE_CODE_OK.getId() : responseCode;
             }
 
-            int deliveryNumberToReport = (int) resultSet.get(DELIVERY_NUMBER);
+            int deliveryNumberToReport = (int) resultSet.get(DELIVERYNUMBER);
 
             HttpStatus httpStatus = updateOrderStatusRestClient.reportDeliveryNumber(deliveryNumberToReport);
             if (httpStatus == null || httpStatus != HttpStatus.OK)
             {
-                logger.debug(String.format("Encountered an error while reporting delivery, httpStatus=%s. Delivery could not be reported - deliveryNumber=%s", httpStatus, deliveryNumberToReport));
-                return RESPONSE_CODE_UNEXPECTED_PROBLEM;
+                logger.debug(String.format(
+                        "Encountered an error while reporting delivery, httpStatus=%s. Delivery could not be reported - deliveryNumber=%s",
+                        httpStatus,
+                        deliveryNumberToReport));
+                return WebServiceResponseCodes.RESPONSE_CODE_UNEXPECTED_PROBLEM.getId();
             }
         }
         finally
         {
             MDC.put("responseTime", String.valueOf(startTime - System.nanoTime()));
         }
-        return RESPONSE_CODE_OK;
+        return WebServiceResponseCodes.RESPONSE_CODE_OK.getId();
     }
 }

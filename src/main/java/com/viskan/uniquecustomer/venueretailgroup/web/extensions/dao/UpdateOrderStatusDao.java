@@ -1,11 +1,11 @@
 package com.viskan.uniquecustomer.venueretailgroup.web.extensions.dao;
 
+import java.sql.Types;
 import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.SingleColumnRowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.jdbc.core.simple.SimpleJdbcCall;
@@ -24,11 +24,11 @@ public class UpdateOrderStatusDao
     private static final String ORDER_NUMBER = "pOrderNumber";
     private static final String TRACKING_NUMBER = "pTrackingNumber";
     private static final String STATUS = "pStatus";
-    private static final String DELIVERYNUMBER = "pDeliveryNumber";
+
+    public static final String DELIVERYNUMBER = "pDeliveryNumber";
 
     public static final String SPRC_UPDATE_TRACKING_REFERENCE = "SPRC_UPDATE_TRACKING_REFERENCE";
     public static final String RETURN_VALUE = "RETURN_VALUE";
-    public static final String DELIVERY_NUMBER = "deliveryNumber";
 
     private static final Logger logger = LoggerFactory.getLogger(UpdateOrderStatusDao.class);
 
@@ -46,18 +46,17 @@ public class UpdateOrderStatusDao
      */
     public Map<String, Object> updateTrackingReference(Long orderNumber, String status, String trackingNumber)
     {
-        simpleJdbcCall.withProcedureName("SPRC_UPDATE_TRACKING_REFERENCE");
+        simpleJdbcCall.withProcedureName(SPRC_UPDATE_TRACKING_REFERENCE);
         simpleJdbcCall.withReturnValue();
-        simpleJdbcCall.returningResultSet(DELIVERY_NUMBER, new SingleColumnRowMapper<>(Integer.class));
         SqlParameterSource in = new MapSqlParameterSource()
-                .addValue(COMP_ID, 11)
-                .addValue(STAMP_INFO, "-1, UpdateOrderStatus, UpdateOrderStatus")
-                .addValue(INT_LANG_ID, -1)
-                .addValue(VISKAN_USER_ID, 1)
-                .addValue(ORDER_NUMBER, orderNumber)
-                .addValue(TRACKING_NUMBER, trackingNumber)
-                .addValue(STATUS, status)
-                .addValue(DELIVERYNUMBER, -1);
+                .addValue(COMP_ID, 11, Types.SMALLINT)
+                .addValue(STAMP_INFO, "-1, UpdateOrderStatus, UpdateOrderStatus", Types.VARCHAR)
+                .addValue(INT_LANG_ID, -1, Types.SMALLINT)
+                .addValue(VISKAN_USER_ID, 1, Types.INTEGER)
+                .addValue(ORDER_NUMBER, orderNumber, Types.INTEGER)
+                .addValue(TRACKING_NUMBER, trackingNumber, Types.NVARCHAR)
+                .addValue(STATUS, status, Types.NVARCHAR)
+                .addValue(DELIVERYNUMBER, -1, Types.INTEGER);
 
         logSpCall(in);
 

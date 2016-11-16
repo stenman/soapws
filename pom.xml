@@ -24,6 +24,9 @@
         <java.version>1.8</java.version>
         <cxf-rt.version>3.1.8</cxf-rt.version>
         <logstash-appender.version>1.1.0</logstash-appender.version>
+        <commons-logging.version>1.2</commons-logging.version>
+        <log4j.version>1.2.17</log4j.version>
+        <jaxws-maven-plugin.version>2.4.1</jaxws-maven-plugin.version>
     </properties>
 
     <dependencies>
@@ -57,10 +60,6 @@
             <artifactId>cxf-rt-transports-http-jetty</artifactId>
             <version>${cxf-rt.version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-        </dependency>
 
         <!-- Database -->
         <dependency>
@@ -77,7 +76,7 @@
         <dependency>
             <groupId>commons-logging</groupId>
             <artifactId>commons-logging</artifactId>
-            <version>1.2</version>
+            <version>${commons-logging.version}</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -90,7 +89,7 @@
         <dependency>
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
-            <version>1.2.17</version>
+            <version>${log4j.version}</version>
         </dependency>
         <dependency>
             <groupId>com.viskan</groupId>
@@ -114,7 +113,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>jaxws-maven-plugin</artifactId>
-                <version>2.4.1</version>
+                <version>${jaxws-maven-plugin.version}</version>
                 <configuration>
                     <wsdlUrls>
                         <wsdlUrl>src/main/resources/service-api-definition/CC_WSFackta1.0.wsdl</wsdlUrl>
