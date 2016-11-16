@@ -11,7 +11,9 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
@@ -26,6 +28,9 @@ public class UpdateOrderStatusController
 
     @Autowired
     UpdateOrderStatusRestClient updateOrderStatusRestClient;
+
+    @Value("${application.instanceid}")
+    private String applicationInstanceid;
 
     private final static Logger logger = LoggerFactory.getLogger(UpdateOrderStatusController.class);
 
@@ -51,34 +56,43 @@ public class UpdateOrderStatusController
      */
     public int updateOrderStatus(String domainName, Long orderNumber, String status, String trackingNumber)
     {
-        if (!domainName.toLowerCase().equals(ACCENT))
+        MDC.put("instanceId", applicationInstanceid);
+        Long startTime = System.nanoTime();
+        try
         {
-            return RESPONSE_CODE_ORDER_NOT_FOUND;
+            if (!domainName.toLowerCase().equals(ACCENT))
+            {
+                return RESPONSE_CODE_ORDER_NOT_FOUND;
+            }
+
+            Map<String, Object> resultSet = updateOrderStatusDao.updateTrackingReference(orderNumber, status, trackingNumber);
+
+            if (resultSet == null || resultSet.isEmpty())
+            {
+                logger.debug(String.format("Resultset from %s was null or empty - resultSet=%s", SPRC_UPDATE_TRACKING_REFERENCE, resultSet));
+                return RESPONSE_CODE_UNEXPECTED_PROBLEM;
+            }
+
+            int responseCode = (int) resultSet.get(RETURN_VALUE);
+
+            if (responseCode != RESPONSE_CODE_OK)
+            {
+                logger.debug(String.format("Could not process delivery. Response code from %s: %s", SPRC_UPDATE_TRACKING_REFERENCE, responseCode));
+                return responseCode == VISKAN_RESPONSE_CODE_ORDER_NOT_DELIVERED ? RESPONSE_CODE_OK : responseCode;
+            }
+
+            int deliveryNumberToReport = (int) resultSet.get(DELIVERY_NUMBER);
+
+            HttpStatus httpStatus = updateOrderStatusRestClient.reportDeliveryNumber(deliveryNumberToReport);
+            if (httpStatus == null || httpStatus != HttpStatus.OK)
+            {
+                logger.debug(String.format("Encountered an error while reporting delivery, httpStatus=%s. Delivery could not be reported - deliveryNumber=%s", httpStatus, deliveryNumberToReport));
+                return RESPONSE_CODE_UNEXPECTED_PROBLEM;
+            }
         }
-
-        Map<String, Object> resultSet = updateOrderStatusDao.updateTrackingReference(orderNumber, status, trackingNumber);
-
-        if (resultSet == null || resultSet.isEmpty())
+        finally
         {
-            logger.debug(String.format("Resultset from %s was null or empty - resultSet=%s", SPRC_UPDATE_TRACKING_REFERENCE, resultSet));
-            return RESPONSE_CODE_UNEXPECTED_PROBLEM;
-        }
-
-        int responseCode = (int) resultSet.get(RETURN_VALUE);
-
-        if (responseCode != RESPONSE_CODE_OK)
-        {
-            logger.debug(String.format("Could not process delivery. Response code from %s: %s", SPRC_UPDATE_TRACKING_REFERENCE, responseCode));
-            return responseCode == VISKAN_RESPONSE_CODE_ORDER_NOT_DELIVERED ? RESPONSE_CODE_OK : responseCode;
-        }
-
-        int deliveryNumberToReport = (int) resultSet.get(DELIVERY_NUMBER);
-
-        HttpStatus httpStatus = updateOrderStatusRestClient.reportDeliveryNumber(deliveryNumberToReport);
-        if (httpStatus == null || httpStatus != HttpStatus.OK)
-        {
-            logger.debug(String.format("Encountered an error while reporting delivery, httpStatus=%s. Delivery could not be reported - deliveryNumber=%s", httpStatus, deliveryNumberToReport));
-            return RESPONSE_CODE_UNEXPECTED_PROBLEM;
+            MDC.put("responseTime", String.valueOf(startTime - System.nanoTime()));
         }
         return RESPONSE_CODE_OK;
     }
