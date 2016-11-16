@@ -2,6 +2,7 @@ target/
 !.mvn/wrapper/maven-wrapper.jar
 .mvn/
 logs/
+src/main/resources/application.properties
 
 ### STS ###
 .apt_generated
